@@ -1,0 +1,46 @@
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+requests.packages.urllib3.disable_warnings()
+
+agent = {
+    'User-Agent' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Safari/537.36'
+}
+urlu = 'https://www.topuniversities.com/student-info/choosing-university/worlds-top-100-universities'
+r4 = requests.get(urlu, headers = agent, verify=False)
+soupu = BeautifulSoup(r4.text, 'html.parser')
+
+tablerow= [i for i in soupu.table.select('tr')]
+
+hrefu=[]
+unitable=[]
+for i in tablerow[2:]:
+    rank=list(i.children)[1].text.strip("\n").strip('\xa0')
+    uniname=list(i.children)[3].text.strip("\n").strip('\xa0')
+    location=list(i.children)[5].text.strip("\n").strip('\xa0')
+    oneu=[rank, uniname, location]
+    unitable.append(oneu)
+    if link:=(list(i.children)[3]).a:
+        hrefu.append(link.get('href'))
+    else: hrefu.append("")
+uni=pd.DataFrame(unitable,columns=['Rank', 'University', 'Country'])
+
+admission=[]
+for i in hrefu:
+    if not i=="":
+        rr = requests.get(i, headers = agent, verify=False)
+        soupr = BeautifulSoup(rr.text, 'html.parser')
+        if t:=soupr.select('div#admissionTab'):
+            exam=[i.text for i in t[0].select('label')]
+            scores=[i.text for i in t[0].select('label+div')]
+            adsum={}
+            for i in range(len(exam)):
+                adsum[exam[i]]=scores[i]
+            admission.append(adsum)
+        else: admission.append({})
+    else: admission.append({})
+
+admdf=pd.DataFrame(admission)
+uniresult=pd.concat([uni, admdf], axis=1)
+uniresult.to_csv('./UniAdmissions.csv', index=False)
+    
